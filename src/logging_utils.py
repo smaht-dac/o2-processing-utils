@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 
 
 def add_to_log(message: str):
-    """Adds one line to the log file. UTC timestamp + the supplied message
+    """
+    Adds one line to the log file. UTC timestamp + the supplied message
 
     Args:
         message (str): text to add to the log

@@ -14,81 +14,79 @@
 #
 ########################################################################
 
-import click
 import subprocess
+import re
+import os
+from constants import REFERENCE_FILE_PATH
+from logging_utils import add_to_log
 
-@click.command()
-@click.help_option("--help", "-h")
-@click.option(
-    "-t",
-    "--time",
-    default="0-06:00:00",
-    required=False,
-    show_default=True,
-    type=str,
-    help="Amount of time to allocate to Slurm job (dd-HH:mm:ss)",
-)
-@click.option(
-    "--mem",
-    default="48G",
-    required=False,
-    show_default=True,
-    type=str,
-    help="Amount of memory to allocate to Slurm job",
-)
-@click.option(
-    "-c",
-    "--threads",
-    required=False,
-    default=32,
-    show_default=True,
-    type=int,
-    help="Number of threads to allocate to Slurm job",
-)
-@click.option(
-    "-u",
-    "--mail-user",
-    required=True,
-    type=str,
-    help="E-mail address to send Slurm reports to",
-)
-@click.option(
-    "-",
-    "--input",
-    required=True,
-    type=str,
-    help="Input PacBio BAM file to align",
-)
-def run_pbmm2(time, mem, threads, mail_user, input):
-    
-    # Throw error if pbmm2=1.13.0 isn't installed -- needs to be installed in conda environment
-
+def check_pbmm2_package():
     """
-    This script gathers metrics from different tools and creates a QualityMetricGeneric item compatible JSON.
-
-    Example usage:
-    parse-qc \
-        -n 'BAM Quality Metrics' \
-        --metrics samtools /PATH/samtools.stats.txt \
-        --metrics picard_CollectInsertSizeMetrics /PATH/picard_cis_metrics.txt \
-        --additional-files /PATH/additional_output_1.pdf \
-        --additional-files /PATH/additional_output_2.tsv \
-        --output-zip metrics.zip
-        --output-json qc_values.json
-
-    This command will parse samtools and picard_CollectInsertSizeMetrics metrics from the files provided for each
-    tool and create a qc.json file. It will also create a zip archive with all 4 provided files.
+    Checks if correct pbmm2 version is installed.
     """
 
-    # prefix to the reference files; don't change for testing purposes.
-    reference_fa="/n/data1/hms/dbmi/park/SOFTWARE/REFERENCE/GRCh38_smaht/hg38_no_alt.fa"
-    preset="CCS"
-    # Change name of output BAM
-    output_bam=input + "_aligned_sorted"
-    
-    pbmm2_command = '"pbmm2 align --num-threads $threads --preset ' + preset + ' --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 ' + reference_fa + ' ' + input + ' ' + output_bam + '"'
-    sbatch_command = 'sbatch -J "pbmm2_step1b_align" -p park -A park_contrib -t 0-6:00:00 --mem=48G -c $threads --mail-type=ALL --mail-user=$email --wrap=' + pbmm2_command
-    result = subprocess.run(sbatch_command.split(), shell = True, capture_output = True, text = True)
+    # Throw error if pbmm2 v1.13.* isn't installed
+    package_list = subprocess.check_output("conda list", shell=True, text = True)
+    package = re.compile("pbmm2\s*1.13")
+    if not re.search(package, package_list):
+        add_to_log(f"Raising exception: pbmm2 v1.13 is a required package")
+        raise Exception(package.pattern.replace('\s*', ' ') + " is a required package.")
 
-if __name__ == "__main__":
-    run_pbmm2()
+def grab_ubams(dir):
+    """
+    Returns list of paths to unaligned BAM files in a given directory
+
+    Args:
+        dir (str): directory to look in
+    """
+
+    dir_list = os.listdir(dir)
+    ubam_list = []
+
+    for file in dir_list:
+        # Check if file is an unaligned bam
+        if file.endswith(".bam") and "aligned_sorted" not in file:
+            # Check if file does not already have an aligned bam
+            # Will likely need to adjust this depending on file structure and 
+            # determined file naming convention
+            if f"{file.rsplit('.', 1)[0]}.aligned_sorted.bam" not in dir_list:
+                ubam_list.append(f"{dir}/{file}")
+    return ubam_list
+
+
+def run_pbmm2_single(time, mem, threads, mail_user, input_bam):
+    """
+    Run pbmm2 on a single unaligned PacBio HiFi/Fiber-seq BAM through Slurm.
+    """
+    
+    add_to_log(f"Preparing to run pbmm2 on {input_bam}. time={time}, mem={mem}, threads={threads}")
+    check_pbmm2_package()
+
+    PRESET = "CCS"
+    output_bam = f"{input_bam.rsplit('.', 1)[0]}.aligned_sorted.bam"
+    
+    pbmm2_command = f'"pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {REFERENCE_FILE_PATH} {input_bam} {output_bam}"'
+    sbatch_command = f'sbatch -J "pbmm2_step1b_align" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap=' + pbmm2_command
+
+    add_to_log(f"Submitting sbatch job for {input_bam}.")
+    try:
+        result = subprocess.run(sbatch_command.split(), shell = True, capture_output = True, text = True)
+    except Exception as e:
+        add_to_log(f"Raising exception: Error submitting sbatch job for {input_bam}.")
+        raise Exception(f"Error submitting sbatch job for {input_bam}")
+
+
+def run_pbmm2_all(time, mem, threads, mail_user, input_dir):
+    
+    add_to_log(f"Preparing to run pbmm2 on unaligned BAMs in {input_dir}. time={time}, mem={mem}, threads={threads}")
+    check_pbmm2_package()
+    
+    PRESET = "CCS"
+    ubam_list = grab_ubams(input_dir)
+    if len(ubam_list) == 0:
+        add_to_log(f"Raising exception: No unaligned BAMs found in {input_dir}.")
+        raise Exception(f"No unaligned BAMs found in {input_dir}.")
+
+    for ubam in ubam_list:
+        run_pbmm2_single(time, mem, threads, mail_user, ubam)
+

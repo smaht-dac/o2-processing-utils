@@ -12,3 +12,4 @@ SUPPORTED_QC_TOOLS = [
     SAMTOOLS_STATS
 ]
 
+REFERENCE_FILE_PATH = "/n/data1/hms/dbmi/park/SOFTWARE/REFERENCE/GRCh38_smaht/hg38_no_alt.fa"
