@@ -17,8 +17,8 @@
 import subprocess
 import re
 import os
-from constants import REFERENCE_FILE_PATH
-from logging_utils import add_to_log
+from src.constants import REFERENCE_FILE_PATH
+from src.logging_utils import add_to_log
 
 def check_pbmm2_package():
     """

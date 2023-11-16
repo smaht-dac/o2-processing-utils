@@ -1,6 +1,6 @@
 
 import os
-from constants import O2_PROCESSING_LOG_PATH
+from src.constants import O2_PROCESSING_LOG_PATH
 from datetime import datetime, timezone
 
 

@@ -16,7 +16,7 @@
 
 import subprocess
 import os
-from logging_utils import add_to_log
+from src.logging_utils import add_to_log
 
 def grab_uninspected_bams(dir):
     """

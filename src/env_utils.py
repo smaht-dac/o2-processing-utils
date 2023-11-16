@@ -1,6 +1,6 @@
 
 import os
-from constants import REQUIRED_ENV_VARIABLES
+from src.constants import REQUIRED_ENV_VARIABLES
 
 
 def check_all_env_variables():

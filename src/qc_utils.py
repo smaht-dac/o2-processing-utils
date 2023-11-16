@@ -1,5 +1,5 @@
 import os
-from constants import SUPPORTED_QC_TOOLS, SAMTOOLS_STATS
+from src.constants import SUPPORTED_QC_TOOLS, SAMTOOLS_STATS
 from pydantic import BaseModel, RootModel
 from typing import List, Dict
 from pathlib import Path
