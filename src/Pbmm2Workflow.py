@@ -30,6 +30,7 @@ EXT_CHECKS_COMPLETE = "checks_complete"
 EXT_QC_RUNNING = "qc_running"
 EXT_ALIGNED_SORTED = "aligned_sorted.bam"
 EXT_SAMTOOLS_STATS = "stats.txt"
+EXT_ALIGNMENT_SLURM_OUT = "out"
 
 ####
 ## TODO: Add reset functionality
@@ -43,7 +44,7 @@ class Pbmm2Workflow:
         self.dir = None
 
     def resume_workflow_single(self, path_to_file):
-        # Get it to work with absolute and relative file paths
+        # Should work with absolute and relative file paths
         if not self.dir:
             self.dir = (
                 "."
@@ -76,7 +77,8 @@ class Pbmm2Workflow:
             self.run_qc(path_to_aligned_bam)
         elif self.is_alignment_complete(file_name):
             print(f"Running basic checks for file {file_name}")
-            # TODO: Run checks
+            path_to_aligned_bam = f"{get_file_without_extension(path_to_file)}.{EXT_ALIGNED_SORTED}"
+            self.run_qc(path_to_aligned_bam)
         elif self.is_alignment_running(file_name):
             print(f"Alignment for {file_name} is currently running. Please rerun command when it is done.")
             return
@@ -112,29 +114,81 @@ class Pbmm2Workflow:
         file_name = os.path.basename(path_to_file)
         file_name_without_ext = get_file_without_extension(path_to_file)
         output_bam = f"{file_name_without_ext}.{EXT_ALIGNED_SORTED}"
-        #alignment_complete_file = f"{file_name_without_ext}.{EXT_ALIGNMENT_COMPLETE}"
-        
-        # TODO: Append to command: create ".alignment_complete" file. I think "... && touch {alignment_complete_file}"
-        pbmm2_command = f'"pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {REFERENCE_FILE_PATH} {path_to_file} {output_bam}"'
-        sbatch_command = f'sbatch -J "pbmm2_step1b_align" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap=' + pbmm2_command
+        slurm_out = f"{output_bam}.out"
 
-        add_to_log(f"Submitting sbatch job for {path_to_file}.")
+
+        # alignment_complete_file = f"{file_name_without_ext}.{EXT_ALIGNMENT_COMPLETE}"
+        # TODO: Append to command: create ".alignment_complete" file. I think "... && touch {alignment_complete_file}"
+        
+        pbmm2_command = f'--wrap="pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {REFERENCE_FILE_PATH} {path_to_file} {output_bam}"'
+        sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} {pbmm2_command}'
+
+        add_to_log(f"Submitting sbatch job to run pbmm2 on {path_to_file}.")
         try:
             result = subprocess.run(sbatch_command.split(), shell = True, capture_output = True, text = True)
         except Exception as e:
             #add_to_log(f"Raising exception: Error submitting sbatch job for {path_to_file}.")
-            raise Exception(f"Error submitting sbatch job for {path_to_file}")
+            raise Exception(f"Error submitting sbatch job to run pbmm2 on {path_to_file}")
         
         # Create the signal for the workflow that pbmm2 is running
         self.create_file_with_extension(file_name, EXT_ALIGNMENT_RUNNING)
 
 
+    def run_alignment_checks(self, path_to_file):
+        """
+        Perform basic checks to confirm aligned BAM was properly generated
+        """
+
+        # TODO: Double check file paths are correct
+        # TODO: Check if this is the correct way to handle failed checks (i.e. throwing errors)
+
+        add_to_log(f"Preparing to run checks on {path_to_file}.")
+
+        slurm_out = f"{path_to_file}.{EXT_ALIGNMENT_SLURM_OUT}"
+
+        # Check if Slurm files contain string "ERROR"; if yes, raise Excpetion
+        ERROR_STRING = "ERROR"
+        with open(slurm_out) as f:
+            if ERROR_STRING in f.read() or ERROR_STRING.lower() in f.read():
+                raise Exception(f"Error submitting sbatch job to run pbmm2 on {path_to_file}")
+
+        # Perform header and EOF checks; raise Excpetion if failed
+        try:
+            subprocess.run(f"samtools quickcheck {path_to_file}",
+                            shell = True, text = True,
+                            capture_output = True, check = True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"samtools quickcheck failed for {path_to_file}") from e
+
+        file_name = os.path.basename(path_to_file)
+        self.create_file_with_extension(file_name, EXT_CHECKS_COMPLETE)
+
+
     def run_qc(self, path_to_file):
 
-        # TODO Run using sbatch
-        # TODO Add logs
-        samtools_stats_command = "samtools stats " + path_to_file
-        result = subprocess.run(samtools_stats_command.split(), shell = True, capture_output = True, text = True)
+        # Hard-coding in sbatch allocated resources here
+        # Should not need to allocate more resources than what's set
+        time = "00-04:00:00"
+        mem = "4G"
+        threads = 2
+        mail_user = self.slurm_config["mail_user"]
+        
+        file_name_without_ext = get_file_without_extension(path_to_file)
+        output_stats = f"{file_name_without_ext}.{EXT_SAMTOOLS_STATS}"
+        
+        add_to_log(f"Preparing to run samtools stats on {path_to_file}. time={time}, mem={mem}, threads={threads}")
+        samtools_stats_command = f'--wrap="samtools stats -@ {threads} {path_to_file} > {output_stats}"'
+        sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user}'
+
+        add_to_log(f"Submitting samtools stats sbatch job on {path_to_file}.")
+        try:
+            result = subprocess.run(sbatch_command.split().append(samtools_stats_command),
+                        shell = True,
+                        capture_output = True,
+                        text = True)
+        except Exception as e:
+            #add_to_log(f"Raising exception: Error submitting samtools stats sbatch job for {path_to_file}.")
+            raise Exception(f"Error submitting samtools stats sbatch job on {path_to_file}.")
 
         # Create the signal for the workflow that QC is running
         file_name = os.path.basename(path_to_file)
@@ -197,25 +251,23 @@ class Pbmm2Workflow:
         return False
     
     def does_file_with_extension_exist(self, file_name: str, extention: str):
-        """Checks if the file with a given extension exists. E.g. if the orginial files is
-            unaligned_file.bam, then this function checks for existence of unaligned_file.{extension}
+        """Checks if the file with a given extension exists. E.g. if the original file is
+            unaligned_file.bam, then this function checks for the existence of unaligned_file.{extension}
 
         Args:
             file_name (str): file name of the unaligned BAM
             extention (str): extension to check for
         """
         file_name_without_ext = get_file_without_extension(file_name)
-        if os.path.isfile(f"{self.dir}/{file_name_without_ext}.{extention}"):
-            return True
-        return False
+        return os.path.isfile(f"{self.dir}/{file_name_without_ext}.{extention}")
     
     def create_file_with_extension(self, file_name: str, extention: str):
-        """Create an empty file for a given extension. E.g. if the orginial files is
-            unaligned_file.bam, then this function creates for existence of unaligned_file.{extension}
+        """Create an empty file for a given extension. E.g. if the original file is
+            unaligned_file.bam, then this function creates unaligned_file.{extension}
 
         Args:
             file_name (str): file name of the unaligned BAM
-            extention (str): extension to check for
+            extention (str): extension the file is created with
         """
         file_name_without_ext = get_file_without_extension(file_name)
         open(f"{self.dir}/{file_name_without_ext}.{extention}", 'w').close()
@@ -226,9 +278,10 @@ class Pbmm2Workflow:
         """
 
         # Throw error if pbmm2 v1.13.* isn't installed
-        package_list = subprocess.check_output("conda list", shell=True, text=True)
-        package = re.compile("pbmm2\s*1.13")
-        if not re.search(package, package_list):
-            raise Exception(
-                package.pattern.replace("\s*", " ") + " is a required package."
-            )
+        REQ_PACKAGE = "pbmm2 1.13"
+        try:
+            instl_package = subprocess.check_output("pbmm2 --version", shell=True, text = True, stderr = subprocess.STDOUT)
+            if REQ_PACKAGE not in instl_package:
+                raise Exception(f"{REQ_PACKAGE} is a required package.")
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"{REQ_PACKAGE} is a required package.") from e        

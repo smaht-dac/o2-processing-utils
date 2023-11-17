@@ -26,11 +26,13 @@ def check_pbmm2_package():
     """
 
     # Throw error if pbmm2 v1.13.* isn't installed
-    package_list = subprocess.check_output("conda list", shell=True, text = True)
-    package = re.compile("pbmm2\s*1.13")
-    if not re.search(package, package_list):
-        add_to_log(f"Raising exception: pbmm2 v1.13 is a required package")
-        raise Exception(package.pattern.replace('\s*', ' ') + " is a required package.")
+    REQ_PACKAGE = "pbmm2 1.13"
+    try:
+        instl_package = subprocess.check_output("pbmm2 --version", shell=True, text = True, stderr = subprocess.STDOUT)
+        if REQ_PACKAGE not in instl_package:
+            raise Exception(f"{REQ_PACKAGE} is a required package.")
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"{REQ_PACKAGE} is a required package.") from e        
 
 def grab_ubams(dir):
     """
