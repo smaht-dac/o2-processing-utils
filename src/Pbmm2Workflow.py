@@ -120,12 +120,12 @@ class Pbmm2Workflow:
         # alignment_complete_file = f"{file_name_without_ext}.{EXT_ALIGNMENT_COMPLETE}"
         # TODO: Append to command: create ".alignment_complete" file. I think "... && touch {alignment_complete_file}"
         
-        pbmm2_command = f'--wrap="pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {REFERENCE_FILE_PATH} {path_to_file} {output_bam}"'
-        sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} {pbmm2_command}'
+        pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {REFERENCE_FILE_PATH} {path_to_file} {output_bam}'
+        sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{pbmm2_command}"'
 
         add_to_log(f"Submitting sbatch job to run pbmm2 on {path_to_file}.")
         try:
-            result = subprocess.run(sbatch_command.split(), shell = True, capture_output = True, text = True)
+            result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
         except Exception as e:
             #add_to_log(f"Raising exception: Error submitting sbatch job for {path_to_file}.")
             raise Exception(f"Error submitting sbatch job to run pbmm2 on {path_to_file}")
@@ -177,15 +177,12 @@ class Pbmm2Workflow:
         output_stats = f"{file_name_without_ext}.{EXT_SAMTOOLS_STATS}"
         
         add_to_log(f"Preparing to run samtools stats on {path_to_file}. time={time}, mem={mem}, threads={threads}")
-        samtools_stats_command = f'--wrap="samtools stats -@ {threads} {path_to_file} > {output_stats}"'
-        sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user}'
+        samtools_stats_command = f'samtools stats -@ {threads} {path_to_file} > {output_stats}'
+        sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
 
         add_to_log(f"Submitting samtools stats sbatch job on {path_to_file}.")
         try:
-            result = subprocess.run(sbatch_command.split().append(samtools_stats_command),
-                        shell = True,
-                        capture_output = True,
-                        text = True)
+            result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
         except Exception as e:
             #add_to_log(f"Raising exception: Error submitting samtools stats sbatch job for {path_to_file}.")
             raise Exception(f"Error submitting samtools stats sbatch job on {path_to_file}.")
