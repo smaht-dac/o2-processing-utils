@@ -28,7 +28,7 @@ EXT_CHECKS_COMPLETE = "checks_complete"
 EXT_QC_RUNNING = "qc_running"
 EXT_ALIGNED_SORTED = "aligned_sorted.bam"
 EXT_SAMTOOLS_STATS = "stats.txt"
-EXT_ALIGNMENT_SLURM_OUT = "out"
+EXT_ALIGNMENT_SLURM_OUT = "align_slurm_out"
 
 
 class Pbmm2Workflow:
@@ -69,7 +69,6 @@ class Pbmm2Workflow:
             return
         elif self.are_checks_complete(file_name):
             print(f"Running QC for file {file_name}")
-            self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED)
             path_to_aligned_bam = self.get_file_with_extension(
                 file_name, EXT_ALIGNED_SORTED
             )
@@ -115,7 +114,7 @@ class Pbmm2Workflow:
 
         PRESET = "CCS"
         output_bam = self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED)
-        slurm_out = f"{output_bam}.out"
+        slurm_out = f"{output_bam}.{EXT_ALIGNMENT_SLURM_OUT}"
 
         pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {self.config.reference_sequence_path} {path_to_file} {output_bam}'
         sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{pbmm2_command}"'
@@ -141,18 +140,7 @@ class Pbmm2Workflow:
 
         add_to_log(f"Running checks on {path_to_file}.")
 
-        # Is this the correct place?
-        slurm_out = f"{path_to_file}.{EXT_ALIGNMENT_SLURM_OUT}"
-
-        # Check if Slurm files contain string "ERROR"; if yes, raise Excpetion
-        ERROR_STRING = "ERROR"
-        with open(slurm_out) as f:
-            f_contents = f.read()
-            if ERROR_STRING in f_contents or ERROR_STRING.lower() in f_contents:
-                raise Exception(
-                    f"Error submitting sbatch job to run pbmm2 on {path_to_file}"
-                )
-
+    
         # Perform header and EOF checks; raise Excpetion if failed
         try:
             subprocess.run(
@@ -270,6 +258,20 @@ class Pbmm2Workflow:
         if self.does_file_with_extension_exist(file_name, EXT_ALIGNED_SORTED):
             return True
         # TODO: We might have to check here for the slurm error file
+
+         # Is this the correct place?
+        slurm_out_file_name = self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT),
+        slurm_out = f"{path_to_file}.{EXT_ALIGNMENT_SLURM_OUT}"
+
+        # Check if Slurm files contain string "ERROR"; if yes, raise Excpetion
+        ERROR_STRING = "ERROR"
+        with open(slurm_out) as f:
+            f_contents = f.read()
+            if ERROR_STRING in f_contents or ERROR_STRING.lower() in f_contents:
+                raise Exception(
+                    f"Error submitting sbatch job to run pbmm2 on {path_to_file}"
+                )
+            
         return False
 
     def is_qc_running(self, file_name: str):

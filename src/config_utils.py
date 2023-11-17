@@ -5,6 +5,7 @@ from src.constants import O2_PROCESSING_CONFIG
 from pydantic import BaseModel, RootModel
 from rich import print
 
+# TODO: Add validators for these models
 class SlurmConfig(BaseModel):
     allocated_time: str
     allocated_memory: str
