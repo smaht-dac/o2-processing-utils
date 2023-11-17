@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "o2-processing-utils"
-version = "0.0.1"
+version = "0.1.0b1"
 description = "Runs a variety of bioinformatics tools on O2 (HMS' HPC), such as long read alignment and QC"
 authors = ["William Feng <william_feng@hms.harvard.edu>", "Alexander Veit <alexander_veit@hms.harvard.edu>"]
 license = "MIT"
@@ -30,6 +30,7 @@ classifiers = [
 python = ">=3.8,<3.12"
 click = "^8.1.3"
 pydantic = "^2.5.0"
+rich = "^13.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=7.1.2"
@@ -41,5 +42,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 o2p-search-log = "src.commands:cmd_search_log"
 o2p-create-summary-qc-file = "src.commands:cmd_create_summary_qc_file"
-o2p-print-slurm-config = "src.commands:cmd_print_slurm_config"
+o2p-print-config = "src.commands:cmd_print_config"
 o2p-run-pbmm2-workflow = "src.commands:cmd_run_pbmm2_workflow"
+o2p-reset-pbmm2-workflow = "src.commands:cmd_reset_pbmm2_workflow"

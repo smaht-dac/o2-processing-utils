@@ -1,0 +1,10 @@
+{
+    "reference_sequence_path": "/n/data1/hms/dbmi/park/SOFTWARE/REFERENCE/GRCh38_smaht/hg38_no_alt.fa",
+    "log_path": "/PATH_TO_LOG/master_log.log",
+    "slurm_config": {
+        "allocated_time": "0-06:00:00",
+        "allocated_memory": "48G",
+        "allocated_threads": 32,
+        "mail_user": ""
+    }
+}

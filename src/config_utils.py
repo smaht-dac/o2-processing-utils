@@ -1,22 +1,34 @@
 
 import os
 import json
-from src.constants import DEFAULT_SLURM_CONFIG, SLURM_CONFIG_PATH
+from src.constants import O2_PROCESSING_CONFIG
+from pydantic import BaseModel, RootModel
+from rich import print
+
+class SlurmConfig(BaseModel):
+    allocated_time: str
+    allocated_memory: str
+    allocated_threads: int
+    mail_user: str
+
+class Config(BaseModel):
+    reference_sequence_path: str
+    log_path: str
+    slurm_config: SlurmConfig
 
 
-def load_slurm_config(verbose=False):
+def load_config():
 
-    if os.getenv(SLURM_CONFIG_PATH):
-        with open(SLURM_CONFIG_PATH) as f:
-            return json.load(f)
+    if os.getenv(O2_PROCESSING_CONFIG):
+        with open(os.getenv(O2_PROCESSING_CONFIG)) as f:
+            c = json.load(f)
+        return Config(**c)
     else:
-        if verbose:
-            print(f"Default Slurm configuration loaded. You can set then envoronment variable {SLURM_CONFIG_PATH} to use your own configuration.")
-        return DEFAULT_SLURM_CONFIG
+        raise Exception(f"Configuration file not found. Please set the environment variable {O2_PROCESSING_CONFIG} with the path to your config file.")
 
-def print_slurm_config():
-    config = load_slurm_config()
-    print(json.dumps(config, indent=2))
+def print_config():
+    config : Config = load_config()
+    print(config)
 
 
 
