@@ -117,27 +117,12 @@ class Pbmm2Workflow:
         output_bam = self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED)
         slurm_out = f"{output_bam}.out"
 
-<<<<<<< HEAD
-        pbmm2_command = f'--wrap="pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {self.config.reference_sequence_path} {path_to_file} {output_bam}"'
-        sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} {pbmm2_command}'
-
-        add_to_log(f"Submitting sbatch job to run pbmm2 on {path_to_file}.")
-        try:
-            result = subprocess.run(
-                sbatch_command.split(), shell=True, capture_output=True, text=True
-            )
-=======
-
-        # alignment_complete_file = f"{file_name_without_ext}.{EXT_ALIGNMENT_COMPLETE}"
-        # TODO: Append to command: create ".alignment_complete" file. I think "... && touch {alignment_complete_file}"
-        
-        pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {REFERENCE_FILE_PATH} {path_to_file} {output_bam}'
+        pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {self.config.reference_sequence_path} {path_to_file} {output_bam}'
         sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{pbmm2_command}"'
 
         add_to_log(f"Submitting sbatch job to run pbmm2 on {path_to_file}.")
         try:
             result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
->>>>>>> main
         except Exception as e:
             raise Exception(
                 f"Error submitting sbatch job to run pbmm2 on {path_to_file}"
@@ -156,7 +141,7 @@ class Pbmm2Workflow:
 
         add_to_log(f"Running checks on {path_to_file}.")
 
-        # IS THIS CORRECT?
+        # Is this the correct place?
         slurm_out = f"{path_to_file}.{EXT_ALIGNMENT_SLURM_OUT}"
 
         # Check if Slurm files contain string "ERROR"; if yes, raise Excpetion
@@ -189,7 +174,6 @@ class Pbmm2Workflow:
         time = "00-04:00:00"
         mem = "4G"
         threads = 2
-<<<<<<< HEAD
         mail_user = self.config.slurm_config.mail_user
 
         file_name = os.path.basename(path_to_file)
@@ -198,34 +182,15 @@ class Pbmm2Workflow:
         add_to_log(
             f"Preparing to run samtools stats on {path_to_file}. time={time}, mem={mem}, threads={threads}"
         )
-        samtools_stats_command = (
-            f'--wrap="samtools stats -@ {threads} {path_to_file} > {output_stats}"'
-        )
-        # TODO: Where does the Slurm output go?
-        sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user}'
-
-        add_to_log(f"Submitting samtools stats sbatch job on {path_to_file}.")
-        try:
-            result = subprocess.run(
-                sbatch_command.split().append(samtools_stats_command),
-                shell=True,
-                capture_output=True,
-                text=True,
-            )
-=======
-        mail_user = self.slurm_config["mail_user"]
-        
-        file_name_without_ext = get_file_without_extension(path_to_file)
-        output_stats = f"{file_name_without_ext}.{EXT_SAMTOOLS_STATS}"
-        
-        add_to_log(f"Preparing to run samtools stats on {path_to_file}. time={time}, mem={mem}, threads={threads}")
         samtools_stats_command = f'samtools stats -@ {threads} {path_to_file} > {output_stats}'
+        # TODO: Where does the Slurm output go?
+        
         sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
+
 
         add_to_log(f"Submitting samtools stats sbatch job on {path_to_file}.")
         try:
             result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
->>>>>>> main
         except Exception as e:
             raise Exception(
                 f"Error submitting samtools stats sbatch job on {path_to_file}."
