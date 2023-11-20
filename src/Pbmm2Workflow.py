@@ -24,12 +24,12 @@ from src.file_utils import get_file_without_extension, remove_files
 from src.qc_utils import parse_and_store_qc_outputs, QC_locations, QC_location
 
 EXT_ALIGNMENT_RUNNING = "alignment_running"
+EXT_ALIGNMENT_SLURM_OUT = "align_slurm_out"
+EXT_ALIGNED_SORTED = "aligned_sorted.bam"
 EXT_CHECKS_COMPLETE = "checks_complete"
 EXT_QC_RUNNING = "qc_running"
-EXT_ALIGNED_SORTED = "aligned_sorted.bam"
+EXT_QC_SLURM_OUT = "qc_slurm_out"
 EXT_SAMTOOLS_STATS = "stats.txt"
-EXT_ALIGNMENT_SLURM_OUT = "align_slurm_out"
-
 
 class Pbmm2Workflow:
     def __init__(self, working_directory):
@@ -55,33 +55,27 @@ class Pbmm2Workflow:
             path_to_stats = self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS)
             qc_location = QC_location(qc_tool=SAMTOOLS_STATS, output_path=path_to_stats)
             qc_locations = QC_locations([qc_location])
-            qc_ouput_path = f"{self.dir}/qc/{file_name_without_ext}.qc"
+            qc_output_path = f"{self.dir}/qc/{file_name_without_ext}.qc"
             # Run QC parser which produces the .qc file
             add_to_log(f"Parsing QC outputs for {file_name} and storing .qc file")
-            parse_and_store_qc_outputs(qc_locations, qc_ouput_path)
+            parse_and_store_qc_outputs(qc_locations, qc_output_path)
 
             self.cleanup(file_name)
             return
         elif self.is_qc_running(file_name):
             print(
-                f"QC for {file_name} is currently running. Please rerun command when it is done."
+                f"QC for file {file_name} is currently running. Please rerun command when it is done."
             )
             return
         elif self.are_checks_complete(file_name):
             print(f"Running QC for file {file_name}")
-            path_to_aligned_bam = self.get_file_with_extension(
-                file_name, EXT_ALIGNED_SORTED
-            )
-            self.run_qc(path_to_aligned_bam)
+            self.run_qc(file_name)
         elif self.is_alignment_complete(file_name):
             print(f"Running basic checks for file {file_name}")
-            path_to_aligned_bam = self.get_file_with_extension(
-                file_name, EXT_ALIGNED_SORTED
-            )
-            self.run_alignment_checks(path_to_aligned_bam)
+            self.run_alignment_checks(file_name)
         elif self.is_alignment_running(file_name):
             print(
-                f"Alignment for {file_name} is currently running. Please rerun command when it is done."
+                f"Alignment for file {file_name} is currently running. Please rerun command when it is done."
             )
             return
         else:
@@ -113,10 +107,10 @@ class Pbmm2Workflow:
         print(log_stmt)
 
         PRESET = "CCS"
-        output_bam = self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED)
-        slurm_out = f"{output_bam}.{EXT_ALIGNMENT_SLURM_OUT}"
+        aligned_bam = self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED)
+        slurm_out = self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT)
 
-        pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {self.config.reference_sequence_path} {path_to_file} {output_bam}'
+        pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {self.config.reference_sequence_path} {path_to_file} {aligned_bam}'
         sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{pbmm2_command}"'
 
         add_to_log(f"Submitting sbatch job to run pbmm2 on {path_to_file}.")
@@ -124,39 +118,37 @@ class Pbmm2Workflow:
             result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
         except Exception as e:
             raise Exception(
-                f"Error submitting sbatch job to run pbmm2 on {path_to_file}"
+                f"Error submitting sbatch job to run pbmm2 on file {path_to_file}"
             )
 
         # Create the signal for the workflow that pbmm2 is running
         self.create_file_with_extension(file_name, EXT_ALIGNMENT_RUNNING)
 
-    def run_alignment_checks(self, path_to_file):
+    def run_alignment_checks(self, file_name):
         """
         Perform basic checks to confirm aligned BAM was properly generated
         """
 
-        # TODO: Double check file paths are correct
-        # TODO: Check if this is the correct way to handle failed checks (i.e. throwing errors)
+        add_to_log(f"Running checks on {file_name}.")
+        path_to_aligned_bam = self.get_file_with_extension(
+            file_name, EXT_ALIGNED_SORTED
+        )
 
-        add_to_log(f"Running checks on {path_to_file}.")
-
-    
-        # Perform header and EOF checks; raise Excpetion if failed
+        # Perform header and EOF checks; raise Exception if failed
         try:
             subprocess.run(
-                f"samtools quickcheck {path_to_file}",
+                f"samtools quickcheck {path_to_aligned_bam}",
                 shell=True,
                 text=True,
                 capture_output=True,
                 check=True,
             )
         except subprocess.CalledProcessError as e:
-            raise Exception(f"samtools quickcheck failed for {path_to_file}") from e
+            raise Exception(f"samtools quickcheck failed for file {path_to_aligned_bam}") from e
 
-        file_name = os.path.basename(path_to_file)
         self.create_file_with_extension(file_name, EXT_CHECKS_COMPLETE)
 
-    def run_qc(self, path_to_file):
+    def run_qc(self, file_name):
         # Hard-coding in sbatch allocated resources here
         # Should not need to allocate more resources than what's set
         time = "00-04:00:00"
@@ -164,41 +156,47 @@ class Pbmm2Workflow:
         threads = 2
         mail_user = self.config.slurm_config.mail_user
 
-        file_name = os.path.basename(path_to_file)
-        output_stats = self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS)
-
         add_to_log(
-            f"Preparing to run samtools stats on {path_to_file}. time={time}, mem={mem}, threads={threads}"
+            f"Preparing to run samtools stats on {aligned_bam}. time={time}, mem={mem}, threads={threads}"
         )
-        samtools_stats_command = f'samtools stats -@ {threads} {path_to_file} > {output_stats}'
-        # TODO: Where does the Slurm output go?
-        
-        sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
 
+        aligned_bam = self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED)
+        slurm_out = self.get_file_with_extension(file_name, EXT_QC_SLURM_OUT)
+        stats_txt = self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS)
 
-        add_to_log(f"Submitting samtools stats sbatch job on {path_to_file}.")
+        samtools_stats_command = f'samtools stats -@ {threads} {aligned_bam} > {stats_txt}'        
+        sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
+
+        add_to_log(f"Submitting samtools stats sbatch job on {aligned_bam}.")
         try:
-            result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
+            result = subprocess.run(
+                sbatch_command,
+                shell = True,
+                capture_output = True,
+                text = True)
         except Exception as e:
             raise Exception(
-                f"Error submitting samtools stats sbatch job on {path_to_file}."
+                f"Error submitting samtools stats sbatch job for file {aligned_bam}."
             )
 
         # Create the signal for the workflow that QC is running
         self.create_file_with_extension(file_name, EXT_QC_RUNNING)
 
     def cleanup(self, file_name: str):
-        add_to_log(f"Cleaning up temporary files for {file_name}.")
-        # TODO: Add slurm output files
+        add_to_log(f"Cleaning up temporary files for file {file_name}.")
+
         files_to_remove = [
             self.get_file_with_extension(file_name, EXT_ALIGNMENT_RUNNING),
-            self.get_file_with_extension(file_name, EXT_QC_RUNNING),
+            self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT),
             self.get_file_with_extension(file_name, EXT_CHECKS_COMPLETE),
+            self.get_file_with_extension(file_name, EXT_QC_RUNNING),
+            self.get_file_with_extension(file_name, EXT_QC_SLURM_OUT),
             self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS),
         ]
         remove_files(files_to_remove)
 
     def reset(self, file_name: str, workflow_step: str):
+
         path_to_file = self.get_file_with_extension(file_name, "bam")
         add_to_log(f"Resetting workflow step '{workflow_step}' for {path_to_file}.")
         if workflow_step == "qc":
@@ -215,6 +213,7 @@ class Pbmm2Workflow:
             self.get_file_with_extension(file_name, EXT_QC_RUNNING),
             f"{self.dir}/qc/{get_file_without_extension(file_name)}.qc",
             self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS),
+            self.get_file_with_extension(file_name, EXT_QC_SLURM_OUT),
         ]
         remove_files(files_to_remove)
 
@@ -230,56 +229,59 @@ class Pbmm2Workflow:
         files_to_remove = [
             self.get_file_with_extension(file_name, EXT_ALIGNMENT_RUNNING),
             self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED),
+            self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT),
         ]
         remove_files(files_to_remove)
 
     def are_checks_complete(self, file_name: str):
-        """Checks the checks have been run on the aligned bams"
+        """Checks if checks have been run on the aligned BAMs
 
         Args:
             file_name (str): file name of the unaligned BAM
         """
+
         return self.does_file_with_extension_exist(file_name, EXT_CHECKS_COMPLETE)
 
     def is_alignment_running(self, file_name: str):
-        """Checks if pbmm2 is currently running"
+        """Checks if pbmm2 is currently running
 
         Args:
             file_name (str): file name of the unaligned BAM
         """
+
         return self.does_file_with_extension_exist(file_name, EXT_ALIGNMENT_RUNNING)
 
     def is_alignment_complete(self, file_name: str):
-        """Checks is the "*_aligned_sorted.bam exists"
+        """Checks if "*.aligned_sorted.bam exists" and if Slurm job was completed
+        successfully.
 
         Args:
             file_name (str): file name of the unaligned BAM
         """
-        if self.does_file_with_extension_exist(file_name, EXT_ALIGNED_SORTED):
-            return True
-        # TODO: We might have to check here for the slurm error file
 
-         # Is this the correct place?
-        slurm_out_file_name = self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT),
-        slurm_out = f"{path_to_file}.{EXT_ALIGNMENT_SLURM_OUT}"
+        if not self.does_file_with_extension_exist(file_name, EXT_ALIGNED_SORTED):
+            return False
 
         # Check if Slurm files contain string "ERROR"; if yes, raise Excpetion
+        slurm_out = self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT)
+
         ERROR_STRING = "ERROR"
         with open(slurm_out) as f:
             f_contents = f.read()
             if ERROR_STRING in f_contents or ERROR_STRING.lower() in f_contents:
                 raise Exception(
-                    f"Error submitting sbatch job to run pbmm2 on {path_to_file}"
+                    f"Error running pbmm2 sbatch job for file {file_name}"
                 )
-            
-        return False
+        
+        return True
 
     def is_qc_running(self, file_name: str):
-        """Checks if QC is currently running"
+        """Checks if QC is currently running
 
         Args:
             file_name (str): file name of the unaligned BAM
         """
+
         return self.does_file_with_extension_exist(file_name, EXT_QC_RUNNING)
 
     def is_qc_complete(self, file_name: str):
@@ -288,6 +290,7 @@ class Pbmm2Workflow:
         Args:
             file_name (str): file name of the unaligned BAM
         """
+
         # TODO: Add verification logic
         return self.does_file_with_extension_exist(file_name, EXT_SAMTOOLS_STATS)
 
@@ -297,6 +300,7 @@ class Pbmm2Workflow:
         Args:
             file_name (str): file name of the unaligned BAM
         """
+
         file_name_without_ext = get_file_without_extension(file_name)
         if os.path.isfile(f"{self.dir}/qc/{file_name_without_ext}.qc"):
             return True
@@ -308,21 +312,32 @@ class Pbmm2Workflow:
 
         Args:
             file_name (str): file name of the unaligned BAM
-            extention (str): extension to check for
+            extension (str): extension to check for
         """
+
         return os.path.isfile(self.get_file_with_extension(file_name, extension))
 
     def create_file_with_extension(self, file_name: str, extension: str):
-        """Create an empty file for a given extension. E.g. if the original file is
+        """Creates an empty file for a given extension. E.g. if the original file is
             unaligned_file.bam, then this function creates unaligned_file.{extension}
 
         Args:
             file_name (str): file name of the unaligned BAM
-            extention (str): extension the file is created with
+            extension (str): extension the file is created with
         """
+
         open(self.get_file_with_extension(file_name, extension), "w").close()
 
-    def get_file_with_extension(self, file_name, extension):
+    def get_file_with_extension(self, file_name: str, extension: str):
+        """Given the name of a file, returns the full file path with the specified
+        extension. E.g. given "unaligned_file.bam" and extension "qc_slurm_out",
+        returns "path/to/file/unaligned_file.qc_slurm_out"
+        
+        Args:
+            file_name (str): file name of the uanligned BAM
+            extension (str): extension the file is given
+        """
+
         file_name_without_ext = get_file_without_extension(file_name)
         return f"{self.dir}/{file_name_without_ext}.{extension}"
 

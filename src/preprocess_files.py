@@ -14,22 +14,22 @@
 #
 ########################################################################
 
-import click
+# import click
 
-@click.command()
-@click.help_option("--help", "-h")
-@click.option(
-    "-",
-    "--input",
-    required=True,
-    type=str,
-    help="Input PacBio BAM file to align",
-)
-def preprocess_files(input):
-    """
-    This script performs some preprocessing of files by moving them to the appropriate directories
-    in preparation for further analysis of them.
-    """
+# @click.command()
+# @click.help_option("--help", "-h")
+# @click.option(
+#     "-",
+#     "--input",
+#     required=True,
+#     type=str,
+#     help="Input PacBio BAM file to align",
+# )
+# def preprocess_files(input):
+#     """
+#     This script performs some preprocessing of files by moving them to the appropriate directories
+#     in preparation for further analysis of them.
+#     """
 
-if __name__ == "__main__":
-    preprocess_files()
+# if __name__ == "__main__":
+#     preprocess_files()

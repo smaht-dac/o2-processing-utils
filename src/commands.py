@@ -64,7 +64,7 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
     "--workflow-step",
     required=True,
     type=str,
-    help="Workflow step to reset",
+    help="Workflow step to reset. Valid options are 'qc', 'checks', and 'alignment'.",
 )
 def cmd_reset_pbmm2_workflow(input_bam, workflow_step):
     check_all_env_variables()
