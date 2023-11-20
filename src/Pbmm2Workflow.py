@@ -292,14 +292,22 @@ class Pbmm2Workflow:
         return self.does_file_with_extension_exist(file_name, EXT_QC_RUNNING)
 
     def is_qc_complete(self, file_name: str):
-        """Checks if QC is complete"
+        """Checks if QC is complete
 
         Args:
             file_name (str): file name of the unaligned BAM
         """
 
-        # TODO: Add verification logic
-        return self.does_file_with_extension_exist(file_name, EXT_SAMTOOLS_STATS)
+        samtools_stats = self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS)
+        qc_slurm_out = self.get_file_with_extension(file_name, EXT_QC_SLURM_OUT)
+
+        if self.does_file_with_extension_exist(file_name, EXT_SAMTOOLS_STATS):
+            if os.path.getsize(samtools_stats) and not os.path.getsize(qc_slurm_out):
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def is_workflow_complete(self, file_name: str):
         """Checks for the existence of the ./qc/{file_name}.qc file
@@ -358,7 +366,7 @@ class Pbmm2Workflow:
             instl_package = subprocess.check_output(
                 f"{package[0]} --version", shell=True, text=True, stderr=subprocess.STDOUT
             )
-            if req_package not in instl_package:
+            if "command not found" in instl_package:
                 raise Exception(f"{req_package} is a required package.")
         except subprocess.CalledProcessError as e:
             raise Exception(f"{req_package} is a required package.") from e
