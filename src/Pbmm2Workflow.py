@@ -26,6 +26,7 @@ from src.qc_utils import parse_and_store_qc_outputs, QC_locations, QC_location
 EXT_ALIGNMENT_RUNNING = "alignment_running"
 EXT_ALIGNMENT_SLURM_OUT = "align_slurm_out"
 EXT_ALIGNED_SORTED = "aligned_sorted.bam"
+EXT_ALIGNED_SORTED_INDEXED = "aligned_sorted.bam.bai"
 EXT_CHECKS_COMPLETE = "checks_complete"
 EXT_QC_RUNNING = "qc_running"
 EXT_QC_SLURM_OUT = "qc_slurm_out"
@@ -163,13 +164,13 @@ class Pbmm2Workflow:
         threads = 2
         mail_user = self.config.slurm_config.mail_user
 
-        add_to_log(
-            f"Preparing to run samtools stats on {aligned_bam}. time={time}, mem={mem}, threads={threads}"
-        )
-
         aligned_bam = self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED)
         slurm_out = self.get_file_with_extension(file_name, EXT_QC_SLURM_OUT)
         stats_txt = self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS)
+
+        add_to_log(
+            f"Preparing to run samtools stats on {aligned_bam}. time={time}, mem={mem}, threads={threads}"
+        )
 
         samtools_stats_command = f'samtools stats -@ {threads} {aligned_bam} > {stats_txt}'        
         sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
@@ -236,6 +237,7 @@ class Pbmm2Workflow:
         files_to_remove = [
             self.get_file_with_extension(file_name, EXT_ALIGNMENT_RUNNING),
             self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED),
+            self.get_file_with_extension(file_name, EXT_ALIGNED_SORTED_INDEXED),
             self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT),
         ]
         remove_files(files_to_remove)
