@@ -31,9 +31,16 @@ EXT_QC_RUNNING = "qc_running"
 EXT_QC_SLURM_OUT = "qc_slurm_out"
 EXT_SAMTOOLS_STATS = "stats.txt"
 
+REQ_PACKAGES = [
+    ("pbmm2", "1.13"),
+    ("samtools", ""),
+    ]
+
+
 class Pbmm2Workflow:
     def __init__(self, working_directory):
-        self.check_pbmm2_package() # TODO: Uncomment in prod
+        self.check_packages(REQ_PACKAGES) # TODO: Uncomment in prod
+        # self.check_pbmm2_package()
         self.config : Config = load_config()
         self.dir = working_directory
 
@@ -341,18 +348,34 @@ class Pbmm2Workflow:
         file_name_without_ext = get_file_without_extension(file_name)
         return f"{self.dir}/{file_name_without_ext}.{extension}"
 
-    def check_pbmm2_package(self):
-        """
-        Checks if correct pbmm2 version is installed.
-        """
+    def check_packages(self, packages: list):
+        for package in packages:
+            self.check_package(package)
 
-        # Throw error if pbmm2 v1.13.* isn't installed
-        REQ_PACKAGE = "pbmm2 1.13"
+    def check_package(self, package):
+        req_package = f"{package[0]} {package[1]}"
         try:
             instl_package = subprocess.check_output(
-                "pbmm2 --version", shell=True, text=True, stderr=subprocess.STDOUT
+                f"{package[0]} --version", shell=True, text=True, stderr=subprocess.STDOUT
             )
-            if REQ_PACKAGE not in instl_package:
-                raise Exception(f"{REQ_PACKAGE} is a required package.")
+            if req_package not in instl_package:
+                raise Exception(f"{req_package} is a required package.")
         except subprocess.CalledProcessError as e:
-            raise Exception(f"{REQ_PACKAGE} is a required package.") from e
+            raise Exception(f"{req_package} is a required package.") from e
+
+
+    # def check_pbmm2_package(self):
+    #     """
+    #     Checks if correct pbmm2 version is installed.
+    #     """
+
+    #     # Throw error if pbmm2 v1.13.* isn't installed
+    #     REQ_PACKAGE = "pbmm2 1.13"
+    #     try:
+    #         instl_package = subprocess.check_output(
+    #             "pbmm2 --version", shell=True, text=True, stderr=subprocess.STDOUT
+    #         )
+    #         if REQ_PACKAGE not in instl_package:
+    #             raise Exception(f"{REQ_PACKAGE} is a required package.")
+    #     except subprocess.CalledProcessError as e:
+    #         raise Exception(f"{REQ_PACKAGE} is a required package.") from e
