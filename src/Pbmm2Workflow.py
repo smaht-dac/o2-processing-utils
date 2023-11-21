@@ -110,7 +110,7 @@ class Pbmm2Workflow:
 
         path_to_file = self.get_file_with_extension(file_name, "bam")
 
-        log_stmt = f"Preparing to run pbmm2 on {path_to_file}. time={time}, mem={mem}, threads={threads}"
+        log_stmt = f"Submitting sbatch job to run pbmm2 on {path_to_file}. time={time}, mem={mem}, threads={threads}"
         add_to_log(log_stmt)
         print(log_stmt)
 
@@ -121,7 +121,6 @@ class Pbmm2Workflow:
         pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {self.config.reference_sequence_path} {path_to_file} {aligned_bam}'
         sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{pbmm2_command}"'
 
-        add_to_log(f"Submitting sbatch job to run pbmm2 on {path_to_file}.")
         try:
             result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
         except Exception as e:
@@ -169,13 +168,12 @@ class Pbmm2Workflow:
         stats_txt = self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS)
 
         add_to_log(
-            f"Preparing to run samtools stats on {aligned_bam}. time={time}, mem={mem}, threads={threads}"
+            f"Submitting sbatch job to run samtools stats on {aligned_bam}. time={time}, mem={mem}, threads={threads}"
         )
 
         samtools_stats_command = f'samtools stats -@ {threads} {aligned_bam} > {stats_txt}'        
         sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
 
-        add_to_log(f"Submitting samtools stats sbatch job on {aligned_bam}.")
         try:
             result = subprocess.run(
                 sbatch_command,

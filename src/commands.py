@@ -11,6 +11,7 @@ from src.Pbmm2Workflow import Pbmm2Workflow
 @click.command()
 @click.help_option("--help", "-h")
 def cmd_print_config():
+    """ Print out the config file"""
     print_config()
 
 
@@ -31,6 +32,12 @@ def cmd_print_config():
     help="Path to folder with unaligned BAM files to run the respective next steps in the workflow",
 )
 def cmd_run_pbmm2_workflow(input_bam, input_folder):
+    """
+    This script runs the full pbmm2 workflow on a given unaligned BAM file or all of the unaligned BAM files in
+    a given folder. The script aligns the BAM files, runs some basic checks, runs samtools stats, and gathers
+    various metrics on the files.
+    """
+
     if not input_bam and not input_folder:
         print(
             "Error: Either a path to an unaligned BAM file or a path to a folder containing those must be provided"
@@ -67,6 +74,10 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
     help="Workflow step to reset. Valid options are 'qc', 'checks', and 'alignment'.",
 )
 def cmd_reset_pbmm2_workflow(input_bam, workflow_step):
+    """
+    This script resets a specific workflow step for a given input BAM file.
+    """
+
     check_all_env_variables()
     working_dir = (
         "." if os.path.dirname(input_bam) == "" else os.path.dirname(input_bam)
@@ -86,10 +97,8 @@ def cmd_reset_pbmm2_workflow(input_bam, workflow_step):
     help="Term to search for in the logs",
 )
 def cmd_search_log(search_term):
-    """Searches the master log file for the specified terms and prints every hit to the terminmal
-
-    Args:
-        search_term (str): Search term
+    """
+    Searches the master log file for the specified terms and prints every hit to the terminal
     """
     check_all_env_variables()
     search_log(search_term)
@@ -102,16 +111,25 @@ def cmd_search_log(search_term):
     "--qc-folder",
     required=True,
     type=str,
-    help="Folder where individual .qc files are located",
+    help="Absolute path to folder where individual .qc files are located",
 )
 @click.option(
     "-s",
     "--summary-qc-path",
     required=True,
     type=str,
-    help="Path of the output summary QC file",
+    help="Absolute path of the output summary QC file",
 )
-def cmd_create_summary_qc_file(qc_folder, summary_qc_path):
+def cmd_create_summary_qc_file(qc_folder, summary_qc_path): 
+    """ This scripts generates a summary QC file using the provided folder containing
+        individual .qc files."""
+
+    if not os.path.isabs(qc_folder):
+        print("Error: Please provide the absolute path to the qc folder.")
+        return
+    if not os.path.isabs(summary_qc_path):
+        print("Error: Please provide the absolute path to the summary QC file.")
+        return
     create_summary_qc_file(qc_folder, summary_qc_path)
 
 

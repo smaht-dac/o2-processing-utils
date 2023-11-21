@@ -31,12 +31,15 @@ def parse_and_store_qc_outputs(qcs: QC_locations, tsv_path: str):
     """
 
     all_metrics = parse_qc_outputs(qcs)
-    sorted_keys = list(all_metrics.keys()).sort()
+    sorted_keys = sorted(list(all_metrics.keys()))
     sorted_metrics = []
 
     for key in sorted_keys:
         sorted_metrics.append(all_metrics[key])
-
+   
+    tsv_dir = os.path.dirname(tsv_path) 
+    Path("tsv_dir").mkdir(parents=True, exist_ok=True)
+    
     with open(tsv_path, "w") as outfile:
         csvwriter = csv.writer(outfile, delimiter="\t")
         csvwriter.writerow(sorted_keys)
@@ -50,6 +53,7 @@ def parse_qc_outputs(qcs: QC_locations) -> Dict:
     Args:
         qcs (QC_locations): Defines type and location of the QCs to parse
     """
+    
     metrics_combined = {}
 
     for qc in qcs:
@@ -61,11 +65,11 @@ def parse_qc_outputs(qcs: QC_locations) -> Dict:
         try:
             if qc_tool == SAMTOOLS_STATS:
                 new_metrics = parse_samtools_stats(qc_output_path)
-
             metrics_combined = {**metrics_combined, **new_metrics}
         except Exception as e:
             raise Exception(f"Error parsing QC file: {str(e)}")
-
+    
+    return metrics_combined
 
 def create_summary_qc_file(qc_folder: str, summary_qc_path):
     """This function searches for all .qc files in the given folder
@@ -85,19 +89,20 @@ def create_summary_qc_file(qc_folder: str, summary_qc_path):
         # because path is an object not string
         path = str(path_obj)
 
-        tsv_file = csv.reader(path, delimiter="\t")
-        keys = next(tsv_file)  # First line
-        keys.insert(0, "File name")
-        # Make sure that TSV headers are the same
-        if current_keys and ",".join(keys) != ",".join(current_keys):
-            raise Exception(
-                "Can't merge QC files. The TSV files have different headers."
-            )
-        current_keys = keys
+        with open(path) as qc_file:
+            tsv_file = csv.reader(qc_file, delimiter="\t")
+            keys = next(tsv_file)  # First line
+            keys.insert(0, "File name")
+            # Make sure that TSV headers are the same
+            if current_keys and ",".join(keys) != ",".join(current_keys):
+                raise Exception(
+                    "Can't merge QC files. The TSV files have different headers."
+                )
+            current_keys = keys
 
-        values = next(tsv_file)
-        values.insert(0, file_name)
-        all_values.append(values)  # Second line
+            values = next(tsv_file)
+            values.insert(0, file_name)
+            all_values.append(values)  # Second line
 
     with open(summary_qc_path, "w") as outfile:
         csvwriter = csv.writer(outfile, delimiter="\t")
