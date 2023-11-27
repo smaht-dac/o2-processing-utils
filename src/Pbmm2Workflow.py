@@ -40,8 +40,7 @@ REQ_PACKAGES = [
 
 class Pbmm2Workflow:
     def __init__(self, working_directory):
-        self.check_packages(REQ_PACKAGES) # TODO: Uncomment in prod
-        # self.check_pbmm2_package()
+        self.check_packages(REQ_PACKAGES)
         self.config : Config = load_config()
         self.dir = working_directory
 
@@ -92,12 +91,11 @@ class Pbmm2Workflow:
     def resume_workflow_all(self):
         pathlist = Path(self.dir).rglob("*.bam")
         for path_obj in pathlist:
-            # because path is an object not string
-            path_to_file = str(path_obj)
+            file_name = str(path_obj.name)
             # Do not run the workflow on aligned BAM files
-            if EXT_ALIGNED_SORTED in path_to_file:
+            if EXT_ALIGNED_SORTED in file_name:
                 continue
-            self.resume_workflow_single(path_to_file)
+            self.resume_workflow_single(file_name)
 
     def run_pbmm2(self, file_name):
         """
