@@ -81,6 +81,8 @@ def create_summary_qc_file(qc_folder: str, summary_qc_path):
         summary_qc_path (str): File path to the summary qc file
     """
 
+    print(f"Creating summary QC file from .qc files in folder {qc_folder}.")
+
     current_keys = None
     all_values = []
     pathlist = Path(qc_folder).rglob("*.qc")
