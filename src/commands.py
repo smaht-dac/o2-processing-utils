@@ -40,12 +40,20 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
 
     if not input_bam and not input_folder:
         print(
-            "Error: Either a path to an unaligned BAM file or a path to a folder containing those must be provided"
-        )
+            "Error: Either a path to an unaligned BAM file or a path to a folder containing those must be provided."
+            )
+        return
+    if input_bam and input_folder:
+        print(
+            "Error: argument -b/--input-bam not allowed with argument -f/--input-folder."
+            )
         return
     check_all_env_variables()
 
     if input_bam:
+        if not os.path.isfile(input_bam):
+            print("Error: Please provide the path to a valid file.")
+            return
         working_dir = (
             "." if os.path.dirname(input_bam) == "" else os.path.dirname(input_bam)
         )
@@ -53,6 +61,11 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
         file_name = os.path.basename(input_bam)
         pbmm2_workflow.resume_workflow_single(file_name)
     elif input_folder:
+        if not os.path.isdir(input_folder):
+            print("Error: Please provide the path to a valid directory.")
+            return
+        # strip trailing backslashes for folders
+        input_folder = input_folder.rstrip("/")
         pbmm2_workflow = Pbmm2Workflow(input_folder)
         pbmm2_workflow.resume_workflow_all()
 
@@ -64,7 +77,7 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
     "--input-bam",
     required=True,
     type=str,
-    help="Path to an unaligned BAM file to run the next step in the workflow",
+    help="Path to an unaligned BAM file to reset a step in the workflow.",
 )
 @click.option(
     "-s",
@@ -94,7 +107,7 @@ def cmd_reset_pbmm2_workflow(input_bam, workflow_step):
     "--search-term",
     required=True,
     type=str,
-    help="Term to search for in the logs",
+    help="Term to search for in the log.",
 )
 def cmd_search_log(search_term):
     """
@@ -130,6 +143,8 @@ def cmd_create_summary_qc_file(qc_folder, summary_qc_path):
     if not os.path.isabs(summary_qc_path):
         print("Error: Please provide the absolute path to the summary QC file.")
         return
+    
+    qc_folder = qc_folder.rstrip("/")
     create_summary_qc_file(qc_folder, summary_qc_path)
 
 

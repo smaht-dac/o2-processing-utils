@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "o2-processing-utils"
-version = "0.1.0b7"
+version = "0.1.0b8"
 description = "Runs a variety of bioinformatics tools on O2 (HMS' HPC), such as long read alignment and QC"
 authors = ["William Feng <william_feng@hms.harvard.edu>", "Alexander Veit <alexander_veit@hms.harvard.edu>"]
 license = "MIT"

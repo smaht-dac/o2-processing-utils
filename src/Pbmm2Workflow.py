@@ -201,8 +201,13 @@ class Pbmm2Workflow:
 
     def reset(self, file_name: str, workflow_step: str):
 
+        if self.is_workflow_complete(file_name):
+            print(
+                f"The workflow is complete for file {file_name}. Nothing to reset."
+            )
+            return
+        
         path_to_file = self.get_file_with_extension(file_name, "bam")
-        add_to_log(f"Resetting workflow step '{workflow_step}' for {path_to_file}.")
         if workflow_step == "qc":
             self.reset_qc(file_name)
         elif workflow_step == "checks":
@@ -211,6 +216,9 @@ class Pbmm2Workflow:
             self.reset_alignment(file_name)
         else:
             print("Error: workflow_step must be on of 'qc', 'checks', 'alignment'.")
+            return
+        
+        add_to_log(f"Resetting workflow step '{workflow_step}' for {path_to_file}.")
 
     def reset_qc(self, file_name: str):
         files_to_remove = [
