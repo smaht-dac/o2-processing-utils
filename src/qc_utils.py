@@ -37,8 +37,8 @@ def parse_and_store_qc_outputs(qcs: QC_locations, tsv_path: str):
     for key in sorted_keys:
         sorted_metrics.append(all_metrics[key])
    
-    tsv_dir = os.path.dirname(tsv_path) 
-    Path("tsv_dir").mkdir(parents=True, exist_ok=True)
+    tsv_dir = os.path.dirname(tsv_path)
+    Path(tsv_dir).mkdir(parents=True, exist_ok=True)
     
     with open(tsv_path, "w") as outfile:
         csvwriter = csv.writer(outfile, delimiter="\t")

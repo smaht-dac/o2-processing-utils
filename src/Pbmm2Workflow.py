@@ -117,7 +117,7 @@ class Pbmm2Workflow:
         slurm_out = self.get_file_with_extension(file_name, EXT_ALIGNMENT_SLURM_OUT)
 
         pbmm2_command = f'pbmm2 align --num-threads {threads} --preset {PRESET} --strip --unmapped --log-level INFO --sort --sort-memory 1G --sort-threads 4 {self.config.reference_sequence_path} {path_to_file} {aligned_bam}'
-        sbatch_command = f'sbatch -J "pbmm2_align" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{pbmm2_command}"'
+        sbatch_command = f'sbatch -J "o2p_align_pbmm2" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{pbmm2_command}"'
 
         try:
             result = subprocess.run(sbatch_command, shell = True, capture_output = True, text = True)
@@ -170,7 +170,7 @@ class Pbmm2Workflow:
         )
 
         samtools_stats_command = f'samtools stats -@ {threads} {aligned_bam} > {stats_txt}'        
-        sbatch_command = f'sbatch -J "samtools_stats_qc" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
+        sbatch_command = f'sbatch -J "o2p_qc_samtools_stats" -p park -A park_contrib -o {slurm_out} -t {time} --mem={mem} -c {threads} --mail-type=ALL --mail-user={mail_user} --wrap="{samtools_stats_command}"'
 
         try:
             result = subprocess.run(
