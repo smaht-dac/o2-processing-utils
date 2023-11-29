@@ -27,10 +27,10 @@ EXT_ALIGNMENT_RUNNING = "alignment_running"
 EXT_ALIGNMENT_SLURM_OUT = "align_slurm_out"
 EXT_ALIGNED_SORTED = "aligned_sorted.bam"
 EXT_ALIGNED_SORTED_INDEXED = "aligned_sorted.bam.bai"
-EXT_CHECKS_COMPLETE = "checks_complete"
-EXT_QC_RUNNING = "qc_running"
-EXT_QC_SLURM_OUT = "qc_slurm_out"
-EXT_SAMTOOLS_STATS = "stats.txt"
+EXT_CHECKS_COMPLETE = "aligned_sorted.checks_complete"
+EXT_QC_RUNNING = "aligned_sorted.qc_running"
+EXT_QC_SLURM_OUT = "aligned_sorted.qc_slurm_out"
+EXT_SAMTOOLS_STATS = "aligned_sorted.stats.txt"
 
 REQ_PACKAGES = [
     ("pbmm2", "1.13"),
@@ -62,7 +62,7 @@ class Pbmm2Workflow:
             path_to_stats = self.get_file_with_extension(file_name, EXT_SAMTOOLS_STATS)
             qc_location = QC_location(qc_tool=SAMTOOLS_STATS, output_path=path_to_stats)
             qc_locations = QC_locations([qc_location])
-            qc_output_path = f"{self.dir}/qc/{file_name_without_ext}.qc"
+            qc_output_path = f"{self.dir}/qc/{file_name_without_ext}.aligned_sorted.qc"
             # Run QC parser which produces the .qc file
             add_to_log(f"Parsing QC outputs for {file_name} and storing .qc file")
             parse_and_store_qc_outputs(qc_locations, qc_output_path)
@@ -323,7 +323,7 @@ class Pbmm2Workflow:
         """
 
         file_name_without_ext = get_file_without_extension(file_name)
-        if os.path.isfile(f"{self.dir}/qc/{file_name_without_ext}.qc"):
+        if os.path.isfile(f"{self.dir}/qc/{file_name_without_ext}.aligned_sorted.qc"):
             return True
         return False
 

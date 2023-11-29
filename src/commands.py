@@ -88,7 +88,8 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
 )
 def cmd_reset_pbmm2_workflow(input_bam, workflow_step):
     """
-    This script resets a specific workflow step for a given input BAM file.
+    This script resets a specific workflow step for a given input BAM file. This can be helpful in the
+    event that a step is interrupted or if another error occurs.
     """
 
     check_all_env_variables()
