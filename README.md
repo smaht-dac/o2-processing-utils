@@ -32,7 +32,7 @@ The following commands are provided for additional functionality:
 For additional information, you can type any of the following commands into the command line followed by the flag `--help`. If you forget any of the available commands, you can also type `o2p-` into the command line and then hit TAB twice. This will display all of the available functions.
 
 The currently supported alignment tools are:
-- pbmm2
+- pbmm2 v1.13.* (employs minimap2 v2.26)
 
 The currently supported QC tools are:
 - samtools (samtools stats)
