@@ -2,7 +2,9 @@
 Tool for running and logging various bioinformatics tools on Harvard Medical School's high performance computing cluster O2.
 
 ## Installation
-Run `pip install o2_processing_utils` to install the package. You also need samtools, pbmm2 1.13.*, and at least Python 3.8 installed, ideally in a conda environment.
+1. To install the package, you can first install conda and then create a conda environment using the provided .yml file with the following command: `conda env create -f o2_processing_utils.yml`. The environment can then be activated with the command `conda activate o2_processing_utils`.
+
+2. You can also set up the environment manually. Run `pip install o2_processing_utils` to install the package. You also need to install samtools, pbmm2 1.13.*, and at least Python 3.8.
 
 ## Usage
 After installation, first ensure that the environment variable `O2_PROCESSING_CONFIG` is set to the absolute path of the .json file containing the path to the reference file, the path to the log file, and the resources to be allocated to the Slurm job running pbmm2. You can set the environment variable using the command
