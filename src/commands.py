@@ -1,7 +1,7 @@
 import click, os
 from src.logging_utils import search_log
 from src.env_utils import check_env_variable, check_all_env_variables
-from src.qc_utils import create_summary_qc_file
+from src.qc_utils import create_summary_qc_file, print_human_readable_qc
 # from src.run_pbmm2 import run_pbmm2_single, run_pbmm2_all
 # from src.run_qc import run_qc_single, run_qc_all
 from src.config_utils import print_config
@@ -39,21 +39,18 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
     """
 
     if not input_bam and not input_folder:
-        print(
-            "Error: Either a path to an unaligned BAM file or a path to a folder containing those must be provided."
+        raise ValueError(
+            "Either a path to an unaligned BAM file or a path to a folder containing those must be provided."
             )
-        return
     if input_bam and input_folder:
-        print(
-            "Error: argument -b/--input-bam not allowed with argument -f/--input-folder."
+        raise ValueError(
+            "argument -b/--input-bam not allowed with argument -f/--input-folder."
             )
-        return
     check_all_env_variables()
 
     if input_bam:
         if not os.path.isfile(input_bam):
-            print("Error: Please provide the path to a valid file.")
-            return
+            raise IOError("Please provide the path to a valid file.")
         working_dir = (
             "." if os.path.dirname(input_bam) == "" else os.path.dirname(input_bam)
         )
@@ -62,8 +59,7 @@ def cmd_run_pbmm2_workflow(input_bam, input_folder):
         pbmm2_workflow.resume_workflow_single(file_name)
     elif input_folder:
         if not os.path.isdir(input_folder):
-            print("Error: Please provide the path to a valid directory.")
-            return
+            raise IOError("Please provide the path to a valid directory.")
         # strip trailing backslashes for folders
         input_folder = input_folder.rstrip("/")
         pbmm2_workflow = Pbmm2Workflow(input_folder)
@@ -139,14 +135,29 @@ def cmd_create_summary_qc_file(qc_folder, summary_qc_path):
         individual .qc files."""
 
     if not os.path.isabs(qc_folder):
-        print("Error: Please provide the absolute path to the qc folder.")
-        return
+        raise ValueError("Please provide the absolute path to the qc folder.")
     if not os.path.isabs(summary_qc_path):
-        print("Error: Please provide the absolute path to the summary QC file.")
-        return
+        raise ValueError("Please provide the absolute path to the summary QC file.")
     
     qc_folder = qc_folder.rstrip("/")
     create_summary_qc_file(qc_folder, summary_qc_path)
+
+
+@click.command()
+@click.help_option("--help", "-h")
+@click.option(
+    "-i",
+    "--input-qc",
+    required=True,
+    type=str,
+    help="Path of the parsed QC file",
+)
+def cmd_print_qc_file(input_qc): 
+    """ This scripts prints out a QC file in a format that is more human readable. Note: This
+    function is intended to be used for individual parsed QC files generated from a single
+    aligned BAM. Do not provide a summary QC file."""
+
+    print_human_readable_qc(input_qc)
 
 
 # @click.command()

@@ -68,6 +68,7 @@ class Pbmm2Workflow:
             parse_and_store_qc_outputs(qc_locations, qc_output_path)
 
             self.cleanup(file_name)
+            print(f"Finished parsing qc outputs and cleaning up intermediate files for {file_name}.")
             return
         elif self.is_qc_running(file_name):
             print(
@@ -152,6 +153,7 @@ class Pbmm2Workflow:
             raise Exception(f"samtools quickcheck failed for file {path_to_aligned_bam}") from e
 
         self.create_file_with_extension(file_name, EXT_CHECKS_COMPLETE)
+        print("samtools quickcheck passed for file {path_to_aligned_bam}")
 
     def run_qc(self, file_name):
         # Hard-coding in sbatch allocated resources here
@@ -215,8 +217,7 @@ class Pbmm2Workflow:
         elif workflow_step == "alignment":
             self.reset_alignment(file_name)
         else:
-            print("Error: workflow_step must be on of 'qc', 'checks', 'alignment'.")
-            return
+            raise ValueError("workflow_step must be on of 'qc', 'checks', 'alignment'.")
         
         add_to_log(f"Resetting workflow step '{workflow_step}' for {path_to_file}.")
 

@@ -42,6 +42,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 o2p-search-log = "src.commands:cmd_search_log"
 o2p-create-summary-qc-file = "src.commands:cmd_create_summary_qc_file"
+o2p-print-qc-file = "src.commands:cmd_print_qc_file"
 o2p-print-config = "src.commands:cmd_print_config"
 o2p-run-pbmm2-workflow = "src.commands:cmd_run_pbmm2_workflow"
 o2p-reset-pbmm2-workflow = "src.commands:cmd_reset_pbmm2_workflow"
