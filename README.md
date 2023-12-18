@@ -30,7 +30,7 @@ The following commands are provided for additional functionality:
 | -------------------------- | ----------- |
 | o2p-print-config           | Print out O2_PROCESSING_CONFIG. |
 | o2p-reset-pbmm2-workflow   | Reset a given workflow step for a given BAM file. This command only works for workflow runs that are incomplete. |
-| o2p-print-qc-file          | Print out a specified qc file in a more human-readable format. |
+| o2p-print-qc-file          | Print out a specified QC file in a human-readable format. |
 | o2p-create-summary-qc-file | Generate a summary QC file from a set of individual .qc files. |
 | o2p-search-log             | Search the log for a given string. |
 

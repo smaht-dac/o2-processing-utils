@@ -152,10 +152,11 @@ def cmd_create_summary_qc_file(qc_folder, summary_qc_path):
     type=str,
     help="Path of the parsed QC file",
 )
-def cmd_print_qc_file(input_qc): 
-    """ This scripts prints out a QC file in a format that is more human readable. Note: This
-    function is intended to be used for individual parsed QC files generated from a single
-    aligned BAM. Do not provide a summary QC file."""
+def cmd_print_qc_file(input_qc):
+    """ This scripts prints out a QC file in a human readable format using the "less" function.
+    Use your left and right arrow keys to view the entire file (since line wrapping has been removed).
+    This function works for both individual parsed QC files generated from a single aligned BAM and
+    for summary QC files."""
 
     print_human_readable_qc(input_qc)
 

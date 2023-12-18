@@ -126,26 +126,8 @@ def parse_samtools_stats(path):
 
 def print_human_readable_qc(input_qc):
 
-    if not input_qc.endswith(".qc"):
-        raise ValueError("Please provide a qc file that has the .qc extension.")
     if not os.path.isfile(input_qc):
         raise IOError("Please provide the path to a valid file.")
-
-    metrics = []
-    # Parse file and save metrics
-    print(f"{input_qc} metrics")
-    with open(input_qc) as file:
-        for line in file:
-            line = line.strip().split("\t")
-            metrics.append(line)
-
-    # Tranpose list
-    metrics = [list(metric) for metric in zip(*metrics)]
-    # Calculate longest length of string
-    max_metric_len = max(map(lambda x: len(x[0]), metrics))
-
-    # Print out each metric with even spacing
-    for i in range(len(metrics)):
-        space = max_metric_len + 5 - len(metrics[i][0])
-        output = metrics[i][0] + ' ' * space + metrics[i][1]
-        print(output)
+    
+    cmd = f"column -t -s $'\t' {input_qc} | tr '\t' '\n' | less -S"
+    os.system(cmd)
